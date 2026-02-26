@@ -35,45 +35,111 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
   if (!extract || (!extract.html && (!extract.images || !extract.images.length))) {
-    const data = await storageGet('lastExtract');
-    extract = (data && data.lastExtract) || { html: '', images: [] };
+    const data = await storageGet('spitogatos_extractor_lastExtract');
+    extract = (data && data.spitogatos_extractor_lastExtract) || { html: '', images: [] };
   }
-  if (!extract.html && !extract.images.length) {
-    status.textContent = 'No extracted content available. Make sure you opened the extension via the toolbar icon.';
-  }
-  content.innerHTML = extract.html || '<p>No extracted content.</p>';
 
-  // Render image thumbnails (show images even if extracted HTML is empty)
-  try {
-    const imgs = extract.images || [];
-    const gallery = document.createElement('div');
-    gallery.style.marginTop = '12px';
-    gallery.style.display = 'flex';
-    gallery.style.flexWrap = 'wrap';
-    gallery.style.gap = '8px';
-    if (imgs.length) {
-      imgs.forEach(u => {
-        try {
-          const a = document.createElement('a');
-          a.href = u;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          const im = document.createElement('img');
-          im.src = u;
-          im.style.maxWidth = '180px';
-          im.style.height = 'auto';
-          im.style.display = 'block';
-          im.style.border = '1px solid #ccc';
-          im.style.padding = '2px';
-          a.appendChild(im);
-          gallery.appendChild(a);
-        } catch (e) { /* ignore image render errors */ }
+  if (extract.images && extract.images.length > 0) {
+    status.textContent = `Displaying ${extract.images.length} extracted images.`;
+    content.innerHTML = ''; // clear default
+    const imageGrid = document.createElement('div');
+    imageGrid.style.display = 'grid';
+    imageGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
+    imageGrid.style.gap = '10px';
+    extract.images.forEach(imgUrl => {
+      const imgWrapper = document.createElement('div');
+      imgWrapper.className = 'image-grid-wrapper';
+      imgWrapper.style.position = 'relative';
+      imgWrapper.style.paddingBottom = '100%'; // 1:1 aspect ratio
+      const img = document.createElement('img');
+      img.src = imgUrl;
+      img.title = imgUrl;
+      img.style.position = 'absolute';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      img.style.borderRadius = '4px';
+      imgWrapper.appendChild(img);
+      imageGrid.appendChild(imgWrapper);
+
+      imgWrapper.addEventListener('click', () => {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+
+        const modalImg = document.createElement('img');
+        modalImg.src = imgUrl;
+
+        const modalClose = document.createElement('div');
+        modalClose.className = 'modal-close';
+        modalClose.innerHTML = '&times;';
+
+        modalContent.appendChild(modalImg);
+        modalContent.appendChild(modalClose);
+        modalOverlay.appendChild(modalContent);
+        document.body.appendChild(modalOverlay);
+
+        // Animate in
+        requestAnimationFrame(() => {
+          modalOverlay.classList.add('visible');
+        });
+
+        const closeModal = () => {
+          modalOverlay.classList.remove('visible');
+          modalOverlay.addEventListener('transitionend', () => {
+            if (modalOverlay.parentNode) {
+              modalOverlay.parentNode.removeChild(modalOverlay);
+            }
+          }, { once: true });
+        };
+
+        modalClose.addEventListener('click', (e) => { e.stopPropagation(); closeModal(); });
+        modalOverlay.addEventListener('click', (e) => {
+          if (e.target === modalOverlay) closeModal();
+        });
       });
-      content.appendChild(gallery);
-    }
-  } catch (e) {
-    console.warn('listing: failed to render image gallery', e);
+    });
+    content.appendChild(imageGrid);
+  } else if (extract.html) {
+    status.textContent = 'No images found, showing raw extracted HTML.';
+    content.innerHTML = extract.html;
+  } else {
+    status.textContent = 'No extracted content available. Make sure you run the extension on a page with content.';
+    content.innerHTML = '<p>No extracted content.</p>';
   }
+  // // Render image thumbnails (show images even if extracted HTML is empty)
+  // try {
+  //   const imgs = extract.images || [];
+  //   const gallery = document.createElement('div');
+  //   gallery.style.marginTop = '12px';
+  //   gallery.style.display = 'flex';
+  //   gallery.style.flexWrap = 'wrap';
+  //   gallery.style.gap = '8px';
+  //   if (imgs.length) {
+  //     imgs.forEach(u => {
+  //       try {
+  //         const a = document.createElement('a');
+  //         a.href = u;
+  //         a.target = '_blank';
+  //         a.rel = 'noopener noreferrer';
+  //         const im = document.createElement('img');
+  //         im.src = u;
+  //         im.style.maxWidth = '180px';
+  //         im.style.height = 'auto';
+  //         im.style.display = 'block';
+  //         im.style.border = '1px solid #ccc';
+  //         im.style.padding = '2px';
+  //         a.appendChild(im);
+  //         gallery.appendChild(a);
+  //       } catch (e) { /* ignore image render errors */ }
+  //     });
+  //     content.appendChild(gallery);
+  //   }
+  // } catch (e) {
+  //   console.warn('listing: failed to render image gallery', e);
+  // }
 
   openBtn.addEventListener('click', () => {
     try {
@@ -100,7 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync && typeof chrome.storage.sync.get === 'function') {
         cfg = await chrome.storage.sync.get({ downloadFolder: '' });
       } else {
-        const raw = window.localStorage.getItem('options') || window.localStorage.getItem('xe_options');
+        const raw = window.localStorage.getItem('options') || window.localStorage.getItem('spitogatos_extractor_options');
         if (raw) cfg = JSON.parse(raw);
       }
     } catch (e) {

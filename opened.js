@@ -17,10 +17,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!extract || (!extract.html && (!extract.images || !extract.images.length))) {
     try {
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local && typeof chrome.storage.local.get === 'function') {
-        const data = await chrome.storage.local.get('lastExtract');
-        extract = data.lastExtract || extract;
+        const data = await chrome.storage.local.get('spitogatos_extractor_lastExtract');
+        extract = data.spitogatos_extractor_lastExtract || extract;
       } else {
-        const raw = window.localStorage.getItem('lastExtract');
+        const raw = window.localStorage.getItem('spitogatos_extractor_lastExtract');
         extract = raw ? JSON.parse(raw) : extract;
       }
     } catch (e) {
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync && typeof chrome.storage.sync.get === 'function') {
         cfg = await chrome.storage.sync.get({ downloadFolder: '' });
       } else {
-        const raw = window.localStorage.getItem('xe_options');
+        const raw = window.localStorage.getItem('spitogatos_extractor_options');
         if (raw) cfg = JSON.parse(raw);
       }
     } catch (e) { console.warn('opened: read options failed', e); }
